@@ -29,6 +29,7 @@ import torch
 import torch.distributed as dist
 import numpy as np
 import cv2
+from tqdm import tqdm
 
 import util.misc as misc
 from util.lora_utils import inject_lora, _is_lora_state_dict
@@ -54,6 +55,14 @@ def get_args_parser():
     parser.add_argument('--device', type=str, default='auto',
                         choices=['auto', 'cpu', 'cuda', 'mps'],
                         help='Execution device (auto prefers cuda, then mps, then cpu)')
+    parser.add_argument(
+        '--matmul_precision',
+        default='high',
+        type=str,
+        choices=['highest', 'high', 'medium'],
+        help="Float32 matmul precision on CUDA (enables TF32 on supported NVIDIA GPUs). "
+             "Ignored on MPS/CPU.",
+    )
 
     # Model
     parser.add_argument('--model', type=str, default=None,
@@ -160,6 +169,7 @@ def main(args):
     use_cuda_amp = device.type == 'cuda'
 
     if device.type == 'cuda':
+        torch.set_float32_matmul_precision(args.matmul_precision)
         misc.init_distributed_mode(args)
     else:
         if args.dist_on_itp or _distributed_env_present():
@@ -261,6 +271,8 @@ def main(args):
     print(f"  Pairwise:        {args.pairwise or 'off'}")
     print(f"  World size:      {world_size}")
     print(f"  Device:          {device}")
+    if device.type == 'cuda':
+        print(f"  Matmul precision: {args.matmul_precision}")
     print("=" * 50)
 
     # ============ Load Test Data ============
@@ -316,7 +328,9 @@ def main(args):
         f"{args.sampling_method}-steps{args.num_sampling_steps}-cfg{args.cfg}-"
         f"interval{args.interval_min}-{args.interval_max}-image{num_images}-res{ckpt_args.img_size}"
     )
-    gen_folder = os.path.join(base_folder, "generated")
+    # gen_folder = os.path.join(base_folder, "generated")
+
+    gen_folder = args.output_dir
     compare_folder = os.path.join(base_folder, "compare") if args.pairwise else None
 
     if local_rank == 0:
@@ -339,17 +353,14 @@ def main(args):
             dist.barrier()
         return
 
-    for step in range(num_steps):
+    for step in tqdm(range(num_steps), desc="Generating", disable=local_rank != 0):
         start_idx = world_size * batch_size * step + local_rank * batch_size
 
         # Skip steps where this rank has no real images left
         if start_idx >= num_images:
-            print(f"Rank {local_rank}: Step {step + 1}/{num_steps} — no more images, waiting at barrier.")
             if world_size > 1:
                 dist.barrier()
             continue
-
-        print(f"Rank {local_rank}: Generation step {step + 1}/{num_steps}")
 
         end_idx = start_idx + batch_size
 
@@ -387,11 +398,13 @@ def main(args):
                 break
 
             # Determine filename
-            font_id = int(font_labels_all[img_id])
-            if unicode_labels_all is not None:
-                filename = f"{font_id:04d}_U+{int(unicode_labels_all[img_id]):04X}"
-            else:
-                filename = f"{font_id:04d}_{img_id:05d}"
+            # font_id = int(font_labels_all[img_id])
+            # if unicode_labels_all is not None:
+            #     filename = f"{font_id:04d}_U+{int(unicode_labels_all[img_id]):04X}"
+            # else:
+            #     filename = f"{font_id:04d}_{img_id:05d}"
+
+            filename = int(unicode_labels_all[img_id])
 
             # Convert to uint8 BGR for OpenCV
             gen_img = np.round(np.clip(generated[b_id].numpy().transpose([1, 2, 0]) * 255, 0, 255))

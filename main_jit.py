@@ -127,6 +127,16 @@ def collate_src_target_refs(batch):
 def get_args_parser():
     parser = argparse.ArgumentParser('JiT', add_help=False)
 
+    # performance
+    parser.add_argument(
+        '--matmul_precision',
+        default=None,
+        type=str,
+        choices=['highest', 'high', 'medium'],
+        help="Set float32 matmul precision (enables TF32 usage on supported NVIDIA GPUs). "
+             "If omitted, PyTorch default is used."
+    )
+
     # architecture
     parser.add_argument('--model', default='JiT-B/16', type=str, metavar='MODEL',
                         help='Name of the model to train')
@@ -230,6 +240,9 @@ def main(args):
     misc.init_distributed_mode(args)
     print('Job directory:', os.path.dirname(os.path.realpath(__file__)))
     print("Arguments:\n{}".format(args).replace(', ', ',\n'))
+
+    if args.matmul_precision is not None:
+        torch.set_float32_matmul_precision(args.matmul_precision)
 
     device = torch.device(args.device)
 

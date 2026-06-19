@@ -32,6 +32,16 @@ import util.misc as misc
 def get_args_parser():
     parser = argparse.ArgumentParser('LoRA Fine-Tuning (Single GPU)', add_help=True)
 
+    # performance
+    parser.add_argument(
+        '--matmul_precision',
+        default=None,
+        type=str,
+        choices=['highest', 'high', 'medium'],
+        help="Set float32 matmul precision (enables TF32 usage on supported NVIDIA GPUs). "
+             "If omitted, PyTorch default is used."
+    )
+
     # architecture
     parser.add_argument('--model', default='JiT-B/16', type=str)
     parser.add_argument('--img_size', default=256, type=int)
@@ -108,6 +118,9 @@ def get_args_parser():
 def main(args):
     print("Job directory:", os.path.dirname(os.path.realpath(__file__)))
     print("Arguments:\n{}".format(args).replace(", ", ",\n"))
+
+    if args.matmul_precision is not None:
+        torch.set_float32_matmul_precision(args.matmul_precision)
 
     device = torch.device(args.device)
 

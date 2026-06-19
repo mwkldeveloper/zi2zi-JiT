@@ -52,3 +52,10 @@ events.out.tfevents.*
 # Temp files
 tmp/
 temp/
+
+models/
+run/
+
+.cursor/
+
+output_dir/

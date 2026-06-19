@@ -26,7 +26,13 @@ Usage:
 """
 import argparse
 import logging
+import sys
 from pathlib import Path
+
+# 讓腳本從專案根目錄找到 data_processing
+_root = Path(__file__).resolve().parent.parent
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
 
 from data_processing.pipeline import generate_train_dataset, generate_test_dataset, create_test_npz
 
