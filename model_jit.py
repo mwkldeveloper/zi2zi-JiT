@@ -9,6 +9,13 @@ import math
 import torch.nn.functional as F
 from util.model_util import VisionRotaryEmbeddingFast, get_2d_sincos_pos_embed, RMSNorm
 from encoder import StyleEncoder, ContentEncoder
+import os
+# 若設 DISABLE_TORCH_COMPILE=1 可關閉 torch.compile，避免 Triton 編譯時需要 Python.h
+_use_torch_compile = os.environ.get("DISABLE_TORCH_COMPILE", "").lower() not in ("1", "true", "yes")
+print(f"DISABLE_TORCH_COMPILE: {not _use_torch_compile}")
+
+def _maybe_compile(fn):
+    return torch.compile(fn) if _use_torch_compile else fn
 
 
 def modulate(x, shift, scale):
@@ -134,7 +141,7 @@ def scaled_dot_product_attention(query, key, value, dropout_p=0.0) -> torch.Tens
     scale_factor = 1 / math.sqrt(query.size(-1))
     attn_bias = torch.zeros(query.size(0), 1, L, S, dtype=query.dtype).cuda()
 
-    with torch.cuda.amp.autocast(enabled=False):
+    with torch.amp.autocast('cuda', enabled=False):
         attn_weight = query.float() @ key.float().transpose(-2, -1) * scale_factor
     attn_weight += attn_bias
     attn_weight = torch.softmax(attn_weight, dim=-1)
@@ -210,7 +217,7 @@ class FinalLayer(nn.Module):
             nn.Linear(hidden_size, 2 * hidden_size, bias=True)
         )
 
-    @torch.compile
+    @_maybe_compile
     def forward(self, x, c):
         shift, scale = self.adaLN_modulation(c).chunk(2, dim=1)
         x = modulate(self.norm_final(x), shift, scale)
@@ -232,7 +239,7 @@ class JiTBlock(nn.Module):
             nn.Linear(hidden_size, 6 * hidden_size, bias=True)
         )
 
-    @torch.compile
+    @_maybe_compile
     def forward(self, x,  c, feat_rope=None):
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=-1)
         x = x + gate_msa.unsqueeze(1) * self.attn(modulate(self.norm1(x), shift_msa, scale_msa), rope=feat_rope)
