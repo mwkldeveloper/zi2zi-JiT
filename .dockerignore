@@ -1,0 +1,6 @@
+.venv
+models
+run
+zi2zi_jit.egg-info
+data
+assets

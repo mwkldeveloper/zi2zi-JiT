@@ -1,0 +1,19 @@
+timm
+# ==0.9.12
+tensorboard
+#>=2.18.0
+opencv-python
+scipy
+einops
+#==0.8.1
+gdown
+#==5.2.0
+fonttools
+Pillow
+pytorch-msssim
+lpips
+tqdm
+matplotlib
+git+https://github.com/LTH14/torch-fidelity.git@master#egg=torch-fidelity
+font2data @ git+ssh://git@github.com/idgo/font2data.git
+pyarrow
