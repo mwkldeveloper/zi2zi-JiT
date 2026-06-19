@@ -122,10 +122,10 @@ def generate_chars(
   num_sampling_steps: int = 20,
   matmul_precision: str = "high",
   batch_size: int = 64,
+  content_preserving_cfg: bool = True,
 ) -> None:
   print(f"Generating characters from {checkpoint} with {npz_file} to {output_dir}...")
-  p =subprocess.run(
-    [
+  cmd = [
       sys.executable,
       "generate_chars.py",
       "--checkpoint",
@@ -142,9 +142,10 @@ def generate_chars(
       sampling_method,
       "--num_sampling_steps",
       str(num_sampling_steps),
-    ],
-    check=True,
-  )
+  ]
+  if content_preserving_cfg:
+    cmd.append("--content_preserving_cfg")
+  p = subprocess.run(cmd, check=True)
   return p.returncode
 
 def main() -> None:
@@ -171,6 +172,12 @@ def main() -> None:
     default="high",
     choices=["highest", "high", "medium"],
     help="Float32 matmul precision for CUDA generation (TF32 when high).",
+  )
+  parser.add_argument(
+    "--content_preserving_cfg",
+    action=argparse.BooleanOptionalAction,
+    default=True,
+    help="Keep source glyph structure during CFG (default: on).",
   )
   args = parser.parse_args()
 
@@ -214,7 +221,8 @@ def main() -> None:
     npz_file=args.npz_file, 
     output_dir=OUTPUT_DIR, 
     matmul_precision=args.matmul_precision, 
-    batch_size=args.batch_size
+    batch_size=args.batch_size,
+    content_preserving_cfg=args.content_preserving_cfg,
   )
 
   if result != 0:

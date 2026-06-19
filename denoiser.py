@@ -40,6 +40,7 @@ class Denoiser(nn.Module):
         self.steps = args.num_sampling_steps
         self.cfg_scale = args.cfg
         self.cfg_interval = (args.interval_min, args.interval_max)
+        self.content_preserving_cfg = getattr(args, 'content_preserving_cfg', False)
 
     def drop_labels(self, labels):
         font_labels, char_labels, style_images, content_images = labels
@@ -110,14 +111,19 @@ class Denoiser(nn.Module):
 
     @torch.no_grad()
     def _prepare_sampling_context(self, labels):
-        font_labels, char_labels, _, _ = labels
+        font_labels, char_labels, _, content_images = labels
 
         cond = self.net.y_embedder.encode(labels)
+
+        # Standard CFG drops all conditions (font, style, content).
+        # Content-preserving CFG only drops font/style so CFG amplifies
+        # style while the source glyph structure stays anchored.
+        uncond_content = content_images if self.content_preserving_cfg else None
         null_labels = (
             torch.full_like(font_labels, self.num_fonts),
             torch.full_like(char_labels, self.num_chars),
             None,
-            None,
+            uncond_content,
         )
         uncond = self.net.y_embedder.encode(null_labels)
 

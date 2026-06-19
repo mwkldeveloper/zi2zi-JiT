@@ -84,6 +84,8 @@ def get_args_parser():
                         help='CFG interval minimum (default: from checkpoint, else 0.0)')
     parser.add_argument('--interval_max', type=float, default=None,
                         help='CFG interval maximum (default: from checkpoint, else 1.0)')
+    parser.add_argument('--content_preserving_cfg', action='store_true',
+                        help='Keep content images in the CFG unconditional branch (drop only font/style)')
 
     # LoRA (used only when checkpoint contains LoRA keys)
     parser.add_argument('--lora_r', type=int, default=None,
@@ -253,6 +255,7 @@ def main(args):
     model.steps = args.num_sampling_steps
     model.method = args.sampling_method
     model.cfg_interval = (args.interval_min, args.interval_max)
+    model.content_preserving_cfg = args.content_preserving_cfg
 
     # Print generation config
     print("=" * 50)
@@ -266,6 +269,7 @@ def main(args):
     print(f"  Steps:           {args.num_sampling_steps}")
     print(f"  CFG scale:       {args.cfg}")
     print(f"  CFG interval:    [{args.interval_min}, {args.interval_max}]")
+    print(f"  Content-preserving CFG: {args.content_preserving_cfg}")
     print(f"  Batch size:      {args.batch_size}")
     print(f"  Num images:      {args.num_images or 'all'}")
     print(f"  Pairwise:        {args.pairwise or 'off'}")
@@ -326,7 +330,8 @@ def main(args):
     base_folder = os.path.join(
         args.output_dir,
         f"{args.sampling_method}-steps{args.num_sampling_steps}-cfg{args.cfg}-"
-        f"interval{args.interval_min}-{args.interval_max}-image{num_images}-res{ckpt_args.img_size}"
+        f"interval{args.interval_min}-{args.interval_max}-"
+        f"cpcfg{int(args.content_preserving_cfg)}-image{num_images}-res{ckpt_args.img_size}"
     )
     # gen_folder = os.path.join(base_folder, "generated")
 

@@ -78,6 +78,8 @@ def get_args_parser():
     parser.add_argument('--cfg', default=1.0, type=float)
     parser.add_argument('--interval_min', default=0.0, type=float)
     parser.add_argument('--interval_max', default=1.0, type=float)
+    parser.add_argument('--content_preserving_cfg', action='store_true',
+                        help='Keep content in CFG uncond branch during eval generation')
     parser.add_argument('--num_images', default=50000, type=int)
     parser.add_argument('--test_npz_path', default='test_set.npz', type=str)
     parser.add_argument('--eval_freq', type=int, default=40)
