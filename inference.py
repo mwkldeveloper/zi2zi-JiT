@@ -41,13 +41,13 @@ def zip_generated_images(input_dir, output_dir):
             zipf.write(f"{input_dir}/{image}", image)
     print(f"zip generated images to {output_dir}")
 
-    # Copy the zip file to new 
-    base_path = output_dir
-    base_name, ext = os.path.splitext(base_path)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    new_output_dir = f"{base_name}_{timestamp}{ext}"
-    shutil.copy(output_dir, new_output_dir)
-    print(f"copy zip file to {new_output_dir}")
+    # # Copy the zip file to new 
+    # base_path = output_dir
+    # base_name, ext = os.path.splitext(base_path)
+    # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # new_output_dir = f"{base_name}_{timestamp}{ext}"
+    # shutil.copy(output_dir, new_output_dir)
+    # print(f"copy zip file to {new_output_dir}")
 
 
 def _reject_equals_form(argv: list[str]) -> None:
@@ -179,6 +179,10 @@ def main() -> None:
     default=True,
     help="Keep source glyph structure during CFG (default: on).",
   )
+
+  parser.add_argument('--batch_number', type=int, default=None,
+                        help='Batch number for zip output (default: None)')
+                        
   args = parser.parse_args()
 
   # Step 0: Check if the dataset is already generated
@@ -231,7 +235,9 @@ def main() -> None:
   # Step 4: Zip generated images
   if args.zip_output:
     try:
-        zip_generated_images(OUTPUT_DIR, f"{args.output_dir}/generated_images.zip")
+        zip_file_name = f"{args.output_dir}/generated_images.zip" \
+          if args.batch_number is None else f"{args.output_dir}/generated_images_batch_{args.batch_number}.zip"
+        zip_generated_images(OUTPUT_DIR, zip_file_name)
     finally:
         shutil.rmtree(OUTPUT_DIR)
 
